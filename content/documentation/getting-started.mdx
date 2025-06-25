@@ -40,7 +40,7 @@ const handler = AuthKit({
 export { handler as GET, handler as POST };
 ```
 
-> 💡 If you're using a custom adapter or another database, see [Adapters](/adapters/overview).
+> 💡 If you're using a custom adapter or another database, see [Adapters](/documentation/adapters/overview).
 
 #### If you want to use passkey
 ```ts
@@ -93,7 +93,7 @@ const RedisChallengeStore: ChallengeStore = {
 ```
 
 ### Prisma schema for default Prisma Adapter
-```ts
+```prisma
 model User {
   id             String    @id @default(uuid())
   email          String    @unique
@@ -197,13 +197,13 @@ import { useSession } from "@astra-void/auth-kit/react";
 import { useRouter } from "next/navigation";
 
 const router = useRouter();
-const { data: user, status } = useSession();
+const { data: session } = useSession();
 
-if (status === "loading") return <Spinner />;
-if (status === "unauthenticated") router.push("/login");
+if (session.status === "loading") return <Spinner />;
+if (session.status === "unauthenticated") router.push("/login");
 
-return <p>Welcome {user?.email}!</p>;
+return <p>Welcome {session.user?.email}!</p>;
 ```
 + The status is 'authenticated' | 'unauthenticated' | 'loading';
 
-→ Check out the [Adapters](../adapters/overview) and [API Reference](../reference) for advanced usage.
+→ Check out the [Adapters](/documentation/adapters/overview) and [API Reference](../reference) for advanced usage.
