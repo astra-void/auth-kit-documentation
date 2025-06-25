@@ -26,7 +26,8 @@ This setup assumes you're using [Prisma](https://www.prisma.io/).
 ### `app/api/auth/[...authkit]/route.ts`
 
 ```ts
-import { Adapter, AuthKit } from "@astra-void/auth-kit";
+import { AuthKit } from "@astra-void/auth-kit";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
 
 const handler = AuthKit({
   adapter: PrismaAdapter(prisma),
@@ -39,19 +40,22 @@ export { handler as GET, handler as POST };
 
 #### If you want to use passkey
 ```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+
 const handler = AuthKit({
     adapter: PrismaAdapter(prisma),
     passkey: {
         rpId: "localhost", // Your rpId
         rpName: "Passkey", // Your rpName
         mode: "email", // default is email, but you can use credential
-        challengeStore: YourChallengeStore // Your Challenge Store; default redis store will be provided next version.
+        challengeStore: YourChallengeStore // Your Challenge Store
     }
 });
 
 export { handler as GET, handler as POST };
 ```
-+ If Challenge Store is not provided, in-memory challenge store will be used (not recommended for production).
+> ⚠️ If no Challenge Store is provided, an in-memory store will be used, which is **not recommended for production**.
 
 ### Challenge Store interface
 ```ts
@@ -62,29 +66,21 @@ export interface ChallengeStore {
 }
 ```
 
-### Example for Redis
+### Built-in Challenge Store for Redis
 ```ts
-import { ChallengeStore } from "@astra-void/auth-kit";
+import { AuthKit } from "@astra-void/auth-kit";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+import { RedisChallengeStore } from "@astra-void/auth-kit/store";
 
-const PREFIX = "passkey:challenge";
-
-const RedisChallengeStore: ChallengeStore = {
-    get: async (userId) => {
-        const key = `${PREFIX}:${userId}`;
-        return await redis.get(key);
-    },
-
-    set: async (userId, challenge) => {  
-        const key = `${PREFIX}:${userId}`;
-        await redis.set(key, challenge, "EX", 300);
-        return;
-    },
-
-    delete: async (userId) => {
-        const key = `${PREFIX}:${userId}`;
-        await redis.del(key);
+const handler = AuthKit({
+    adapter: PrismaAdapter(prisma),
+    passkey: {
+        rpId: "localhost", // Your rpId
+        rpName: "Passkey", // Your rpName
+        mode: "email", // default is email, but you can use credential
+        challengeStore: RedisChallengeStore(redis),
     }
-};
+});
 ```
 
 ### Prisma schema for default Prisma Adapter
