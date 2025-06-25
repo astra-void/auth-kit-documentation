@@ -1,2 +1,94 @@
 # Overview
-working ;)
+
+Passkey authentication is a modern, secure, and phishing-resistant authentication method that leverages the WebAuthn standard. It uses public key cryptography to verify a user without requiring passwords.
+
+---
+
+**@astra-void/auth-kit** supports passkey authentication as an optional module. You can use passkeys alongside or instead of email-password authentication.
+
+There are two main modes of operation:
+
+* **email mode**: challenge is stored per user email.
+* **credential mode**: challenge is stored per passkey credential ID.
+
+## Setup
+
+Passkey support must be explicitly enabled when initializing `AuthKit`.
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+
+const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  passkey: {
+    rpId: "localhost", // Your domain or app ID
+    rpName: "My App",
+    mode: "email",     // or "credential"
+    challengeStore: YourChallengeStore // optional, see below
+  }
+});
+
+export { handler as GET, handler as POST };
+```
+
+If no `challengeStore` is provided, an in-memory store will be used by default (not recommended for production).
+
+## Challenge Store Interface
+
+```ts
+export interface ChallengeStore {
+  get: (userId: string) => Promise<string | null>;
+  set: (userId: string, challenge: string) => Promise<void>;
+  delete: (userId: string) => Promise<void>;
+}
+```
+
+### Example Redis Store
+
+```ts
+const PREFIX = "passkey:challenge";
+
+const RedisChallengeStore: ChallengeStore = {
+  get: async (userId) => redis.get(`${PREFIX}:${userId}`),
+  set: async (userId, challenge) => redis.set(`${PREFIX}:${userId}`, challenge, "EX", 300),
+  delete: async (userId) => redis.del(`${PREFIX}:${userId}`),
+};
+```
+
+## Client Usage
+
+All passkey-related functions are available in:
+
+```ts
+import { loginPasskey, registerPasskey } from "@astra-void/auth-kit/react/passkey";
+```
+
+### Registering a Passkey (User must be logged in)
+
+```ts
+await registerPasskey();
+```
+
+### Logging in with Passkey (email mode)
+
+```ts
+await loginPasskey({ email: "test@example.com" });
+```
+
+### Logging in with Passkey (credential mode)
+
+```ts
+await loginPasskey();
+```
+
+## Notes
+
+* Each passkey is associated with a single user.
+* Passkeys are stored in your database and linked to users via the adapter.
+* The credential verification step validates challenge, origin, RP ID, signature, and counter.
+* For highest security, use `userVerification: "required"` in future versions.
+
+→ See [Adapter Guide](../adapters/overview) to ensure your adapter supports passkey fields.
+
+→ See [Getting Started](../getting-started) for the full integration guide.
