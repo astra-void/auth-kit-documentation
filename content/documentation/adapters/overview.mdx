@@ -1,0 +1,106 @@
+# Overview
+
+Adapters are the bridge between **@astra-void/auth-kit** and your database.  
+They abstract away the data layer so you can easily swap or customize how users and passkeys are stored and retrieved.
+
+---
+
+## What is an Adapter?
+
+An adapter is a set of functions that implement database operations related to:
+
+- User lookup by email or ID
+- Passkey lookup by email, credential ID, or raw ID buffer
+- Creating, updating, and deleting users and passkeys
+
+The adapter allows auth-kit to be database-agnostic, supporting Prisma, MongoDB, or any custom database.
+
+---
+
+## Built-in Prisma Adapter
+We provide a built-in Prisma adapter for ease of use with SQL databases.
+
+### Installation
+
+Make sure you have Prisma set up with the default schema (see [Getting Started](/documentation/getting-started)).
+
+### Usage
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { PrismaClient } from "@prisma/client";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+
+const prisma = new PrismaClient();
+
+const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+});
+
+export { handler as GET, handler as POST};
+```
+
+## Creating a Custom Adapter
+You can implement your own adapter if you use a different database or have custom requirements.
+
+### Type Definition
+```ts
+export interface AdapterUser extends User {
+  passkeys?: Passkey[];
+}
+
+export interface Passkey {
+  id: string;
+  publicKey: Buffer;
+  userId: string;
+  webAuthnId: Buffer;
+  counter: number;
+  transports: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Adapter {
+    createUser?: (email: string, hashedPassword: string, username?: string) => Promise<AdapterUser>;
+
+    getUser?: (id: string) => Promise<AdapterUser | null>;
+    
+    getUserByEmail?: (email: string) => Promise<AdapterUser | null>;
+
+    updateUser?: (userId: string, data: Partial<AdapterUser>) => Promise<AdapterUser>;
+
+    deleteUser?: (userId: string) => Promise<null>;
+
+    createPasskey?: (userId: string, webAuthnId: Buffer, publicKey: Buffer, transports: string) => Promise<Passkey>;
+
+    getPasskey?: (userId: string) => Promise<Passkey[] | null>;
+
+    getPasskeyByEmail?: (email: string) => Promise<Passkey[] | null>;
+
+    getPasskeyByRaw?: (webAuthnId: Buffer<ArrayBuffer>) => Promise<Passkey | null>;
+
+    getPasskeys?: () => Promise<Passkey[] | null>;
+
+    updatePasskey?: (passkeyId: string, data: Partial<Passkey>) => Promise<Passkey>;
+
+    deletePasskey?: (userId: string) => Promise<null>;
+}
+```
+
+#### Example Stub Adapter
+```ts
+import { Adapter } from "@astra-void/auth-kit/adapters";
+
+const CustomAdapter: Adapter = {
+    getUser: async (id) => {
+        // Query your DB here
+        return null;
+    },
+  // Implement other methods...
+};
+```
+
+## Notes
+All adapter methods are asynchronous and return promises.
+
+Adapter methods should map your database records to the expected AdapterUser and Passkey types.
