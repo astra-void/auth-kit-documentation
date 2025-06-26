@@ -1,0 +1,58 @@
+# Examples
+
+Here are complete authentication examples using @astra-void/auth-kit.
+Each example includes full source code and a working implementation.
+
+### Email / Password
+
+Basic email and password login using JWT sessions.
+
+- Registration and login flow
+- Secure cookie-based session management
+- Protected routes with middleware
+
+[View on GitHub](https://github.com/astra-void/auth-kit-example/tree/main/examples/default)
+
+### Passkey (Email-first)
+
+WebAuthn passkey login that begins with email input.
+
+- Email → challenge → biometric login
+- Redis-backed challenge store
+- Works with platform authenticators (Face ID, Touch ID)
+
+[View on GitHub](https://github.com/astra-void/auth-kit-example/tree/main/examples/passkey/email)
+
+### Passkey (Credential-Only)
+
+Pure WebAuthn login without requiring an email prompt.
+
+- Fully passwordless
+- Supports conditional UI (Chrome, Safari)
+- FIDO2 cross-device login support
+
+[View on GitHub](https://github.com/astra-void/auth-kit-example/tree/main/examples/passkey/credential)
+
+> ⚠️ Note:
+Credential-only login does not ask the user to enter their email.
+This means the browser must try to match all stored credentials.
+If a user has many registered accounts on a device, this may lead to degraded performance or slower UI rendering during login.
+For better performance at scale, consider using email-first instead.
+
+---
+
+### All Examples
+
+You can explore all examples in the monorepo:
+
+[Browse the examples folder](https://github.com/astra-void/auth-kit-example/tree/main/examples)
+
+Each example is built with **Next.js App Router** and uses **TypeScript** and secure session cookies.  
+To run locally:
+
+```bash
+git clone https://github.com/astra-void/auth-kit-example.git
+cd examples/default # or passkey/email, passkey/credential
+pnpm install
+pnpm dev
+```
