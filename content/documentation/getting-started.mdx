@@ -28,7 +28,7 @@ This setup assumes you're using [Prisma](https://www.prisma.io/).
 ```env
 AUTHKIT_SECRET = "your_secret_here"
 ```
-+ AUTHKIT_SECRET is a critical value used internally to sign tokens. Please keep the following in mind:
+`AUTHKIT_SECRET` is a critical value used internally to sign tokens. Please keep the following in mind:
 + Use a sufficiently long random string (recommended: at least 32 characters, mixing uppercase, lowercase, numbers, and special characters)
 + Never commit this secret to version control
 + Use different secrets for development and production environments
