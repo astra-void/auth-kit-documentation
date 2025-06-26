@@ -7,19 +7,19 @@ import { SiNpm, SiPnpm, SiYarn } from "react-icons/si"
 const tabs = [
   {
     name: "npm",
-    command: "npm install @astra-void/auth-kit",
+    command: "npm install @astra-void/auth-kit argon2",
     icon: SiNpm,
     color: "text-red-500",
   },
   {
     name: "pnpm",
-    command: "pnpm add @astra-void/auth-kit",
+    command: "pnpm add @astra-void/auth-kit argon2",
     icon: SiPnpm,
     color: "text-orange-500",
   },
   {
     name: "yarn",
-    command: "yarn add @astra-void/auth-kit",
+    command: "yarn add @astra-void/auth-kit argon2",
     icon: SiYarn,
     color: "text-blue-500",
   },
