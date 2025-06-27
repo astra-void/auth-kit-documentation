@@ -1,0 +1,107 @@
+# Overview
+
+Providers in AuthKit define how users authenticate.  
+They encapsulate the logic for login, registration, and session hydration.
+
+---
+
+## What is a Provider?
+
+A **provider** implements the logic for authenticating a user — whether it's with email/password, passkey, OAuth, or even a custom strategy (like magic links).
+
+Each provider must implement the following interface:
+
+```ts
+export type AuthorizeTypes = "oauth" | "email" | "credentials" | "passkey";
+
+export interface Provider {
+    name: string;
+    type: AuthorizeTypes;
+    config?: Record<string, any>;
+    authorize: (body: Body) => Promise<AdapterUser | null>;
+    register?: (body: Body) => Promise<AdapterUser | void | null>;
+    callback?: (req: NextRequest) => Promise<AdapterUser | null>;
+}
+```
+
+## Registering Providers
+
+To use a provider, register it in your AuthKit() setup:
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { CredentialProvider, PasskeyProvider } from "@astra-void/auth-kit/providers";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+
+export const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialProvider(),
+    PasskeyProvider({ ... })
+  ]
+});
+```
+
+You can register multiple providers.
+Each one will be mapped to the `login("provider-name", ...)` or `register("provider-name", ...)` on the client.
+
+## Built-in Providers
+
+### Credential
+
+Traditional email + password authentication.
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { CredentialProvider } from "@astra-void/auth-kit/providers";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+
+export const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialProvider(),
+  ]
+});
+```
+
+Just add it to providers! and download package argon2 or bcrypt for password hashing.
+
+### Passkey
+
+WebAuthn-based passwordless authentication.
+See [Passkey Overview](/documentation/passkey/overview) for full details.
+
+## Custom Provider Example
+
+You can define your own provider easily:
+
+```ts
+import { Provider } from "@astra-void/auth-kit/providers";
+
+const MagicLinkProvider: Provider = {
+  name: "magiclink",
+  type: "email",
+  authorize: async ({ token }) => {
+    const user = await getUserFromToken(token);
+    return user ?? null;
+  },
+  register: async ({ email }) => {
+    return await createUser({ email });
+  }
+};
+```
+
+## Notes
+- Providers are independent — each handles only its own logic.
+
+- You can mix and match multiple strategies per app.
+
+- The client API (login, register) chooses the provider by name.
+
+## See Also
+
+- [Getting Started](../getting-started)
+
+- [Adapters](/documentation/adapters/overview)
+
+- [Passkey](/documentation/passkey/overview)

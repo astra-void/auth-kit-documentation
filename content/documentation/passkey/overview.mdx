@@ -1,94 +1,123 @@
 # Overview
 
-Passkey authentication is a modern, secure, and phishing-resistant authentication method that leverages the WebAuthn standard. It uses public key cryptography to verify a user without requiring passwords.
+Passkeys (WebAuthn) provide a secure, passwordless login mechanism using platform authenticators such as Touch ID, Face ID, or Windows Hello.
 
----
+A passkey is a credential stored on the user's device (or synced via iCloud/Google account) that replaces passwords with biometric or device-based authentication.
 
-**@astra-void/auth-kit** supports passkey authentication as an optional module. You can use passkeys alongside or instead of email-password authentication.
+It uses [WebAuthn](https://webauthn.io/) and [FIDO2](https://fidoalliance.org/fido2/) standards.
+
+Passkey support in **@astra-void/auth-kit** allows you to integrate this modern authentication method seamlessly into your Next.js applications.
+
+## Supported Modes
 
 There are two main modes of operation:
 
-* **email mode**: challenge is stored per user email.
-* **credential mode**: challenge is stored per passkey credential ID.
+### Email-first
+```txt
+1. Enter email ➝ 2. Get challenge ➝ 3. Use passkey ➝ Login
+```
+
+- Ideal for users with multiple accounts per device
+
+- More predictable UX
+
+- Recommended for most use cases
+
+### Credential-only
+```txt
+1. Auto-prompt passkey ➝ 2. Select account ➝ ✅ Login
+```
+
+- Fully passwordless
+
+- No email input required
+
+- May be slower with many credentials on device
+
+> For large-scale apps, email-first is generally preferred due to better performance.
+
 
 ## Setup
 
-Passkey support must be explicitly enabled when initializing `AuthKit`.
-
 ```ts
+// app/api/auth/[...authkit]/route.ts
 import { AuthKit } from "@astra-void/auth-kit";
+import { PasskeyProvider } from "@astra-void/auth-kit/providers";
 import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+import { prisma } from "@/lib/prisma";
 
-const handler = AuthKit({
+export const handler = AuthKit({
   adapter: PrismaAdapter(prisma),
-  passkey: {
-    rpId: "localhost", // Your domain or app ID
-    rpName: "My App",
-    mode: "email",     // or "credential"
-    challengeStore: YourChallengeStore // optional, see below
-  }
+  providers: [
+    PasskeyProvider({
+        rpId: "localhost",
+        rpName: "Passkey Example",
+        mode: "credential",
+        store: "redis",
+        challengeStore: RedisChallengeStore(redis)
+    })
+  ]
 });
-
-export { handler as GET, handler as POST };
 ```
+
+Required Config
+|Option|Type|Description|
+|---|---|---|
+|rpId|string|Relying party ID (e.g. domain name)||
+|rpName|string|Friendly name shown in browser UI||
+|challengeStore|ChallengeStore|Store to persist challenge per user||
+|mode|"email" or "credential"|Login flow strategy||
 
 If no `challengeStore` is provided, an in-memory store will be used by default (not recommended for production).
 
-## Challenge Store Interface
+Also, you should set enviorment variables for `AUTHKIT_ORIGIN`
 
-```ts
-export interface ChallengeStore {
-  get: (userId: string) => Promise<string | null>;
-  set: (userId: string, challenge: string) => Promise<void>;
-  delete: (userId: string) => Promise<void>;
-}
+```txt
+# .env
+AUTHKIT_ORIGIN=http://localhost:3000
 ```
 
-### Example Redis Store
+## Security Notes
 
-```ts
-const PREFIX = "passkey:challenge";
+- Passkeys are phishing-resistant
 
-const RedisChallengeStore: ChallengeStore = {
-  get: async (userId) => redis.get(`${PREFIX}:${userId}`),
-  set: async (userId, challenge) => redis.set(`${PREFIX}:${userId}`, challenge, "EX", 300),
-  delete: async (userId) => redis.del(`${PREFIX}:${userId}`),
-};
-```
+- Challenge should be time-limited (e.g. 5 minutes)
+
+- Always use HTTPS in production
 
 ## Client Usage
 
 All passkey-related functions are available in:
 
-```ts
-import { loginPasskey, registerPasskey } from "@astra-void/auth-kit/react/passkey";
-```
-
 ### Registering a Passkey (User must be logged in)
 
 ```ts
-await registerPasskey();
+import { register } from "@astra-void/auth-kit/react";
+
+await register('passkey');
 ```
 
 ### Logging in with Passkey (email mode)
 
 ```ts
-await loginPasskey({ email: "test@example.com" });
+import { login } from "@astra-void/auth-kit/react";
+
+await login('passkey', { email });
 ```
 
 ### Logging in with Passkey (credential mode)
 
 ```ts
-await loginPasskey();
+import { login } from "@astra-void/auth-kit/react";
+
+await login('passkey');
 ```
 
 ## Notes
 
-* Each passkey is associated with a single user.
 * Passkeys are stored in your database and linked to users via the adapter.
-* The credential verification step validates challenge, origin, RP ID, signature, and counter.
-* For highest security, use `userVerification: "required"` in future versions.
 
-→ See [Adapter Guide](../adapters/overview) to ensure your adapter supports passkey fields.
+## See Also
 
-→ See [Getting Started](../getting-started) for the full integration guide.
+- [Adapter Guide](../adapters/overview)
+- [Getting Started](../getting-started)

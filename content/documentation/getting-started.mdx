@@ -1,10 +1,15 @@
 import InstallTabs from "../../app/components/InstallTabs";
+import CommandTabs from "../../app/components/CommandTabs";
 
 # Getting Started
 
 ## Install
 
-<InstallTabs />
+<CommandTabs
+  npm="npm install @astra-void/auth-kit"
+  pnpm="pnpm add @astra-void/auth-kit"
+  yarn="yarn add @astra-void/auth-kit"
+/>
 
 ## Directory Structure
  
@@ -23,79 +28,10 @@ Set up your project like this:
 ## Setup
 This setup assumes you're using [Prisma](https://www.prisma.io/).
 
-### Secret
-
-```env
-AUTHKIT_SECRET = "your_secret_here"
-```
-`AUTHKIT_SECRET` is a critical value used internally to sign tokens. Please keep the following in mind:
-+ Use a sufficiently long random string (recommended: at least 32 characters, mixing uppercase, lowercase, numbers, and special characters)
-+ Never commit this secret to version control
-+ Use different secrets for development and production environments
-+ Manage secrets securely using environment variables or secret management tools (e.g., Vercel Environment Variables, Docker Secrets)
-
-### `app/api/auth/[...authkit]/route.ts`
-
-```ts
-import { AuthKit } from "@astra-void/auth-kit";
-import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
-
-const handler = AuthKit({
-  adapter: PrismaAdapter(prisma),
-});
-
-export { handler as GET, handler as POST };
-```
-
-> 💡 If you're using a custom adapter or another database, see [Adapters](/documentation/adapters/overview).
-
-#### If you want to use passkey
-```ts
-import { AuthKit } from "@astra-void/auth-kit";
-import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
-
-const handler = AuthKit({
-    adapter: PrismaAdapter(prisma),
-    passkey: {
-        rpId: "localhost", // Your rpId
-        rpName: "Passkey", // Your rpName
-        mode: "email", // default is email, but you can use credential
-        challengeStore: YourChallengeStore // Your Challenge Store
-    }
-});
-
-export { handler as GET, handler as POST };
-```
-> ⚠️ If no Challenge Store is provided, an in-memory store will be used, which is **not recommended for production**.
-
-### Challenge Store interface
-```ts
-export interface ChallengeStore {
-    get: (userId: string) => Promise<string | null>;
-    set: (userId: string, challenge: string) => Promise<void>;
-    delete: (userId: string) => Promise<void>;
-}
-```
-
-### Built-in Challenge Store for Redis
-```ts
-import { AuthKit } from "@astra-void/auth-kit";
-import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
-import { RedisChallengeStore } from "@astra-void/auth-kit/store";
-
-const handler = AuthKit({
-    adapter: PrismaAdapter(prisma),
-    passkey: {
-        rpId: "localhost", // Your rpId
-        rpName: "Passkey", // Your rpName
-        mode: "email", // default is email, but you can use credential
-        challengeStore: RedisChallengeStore(redis),
-    }
-});
-```
-
-### Prisma schema for default Prisma Adapter
+### Define User Schema
 ```prisma
+// prisma/schema.prisma
+
 model User {
   id             String    @id @default(uuid())
   email          String    @unique
@@ -115,101 +51,71 @@ model Passkey {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user       User @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 ```
-+ This Prisma schema is written for SQL-based databases (e.g. PostgreSQL, MySQL).
 
-### `middleware.ts`
+> You can add custom fields (e.g. role, username, etc.) as needed.
+Just make sure your adapter and provider supports them.
 
-This middleware enables CSRF protection and guards protected routes.
+After defining your schema, run the following commands to generate the Prisma client:
 
+<CommandTabs 
+  npm="npx prisma migrate dev --name init && npx prisma generate"
+  pnpm="pnpm prisma migrate dev --name init && pnpm dlx prisma generate"
+  yarn="yarn prisma migrate dev --name init && yarn prisma generate"
+/>
+
+### Set Up API Handler
 ```ts
+// app/api/auth/[...authkit]/route.ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { CredentialProvider } from "@astra-void/auth-kit/providers";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+import { prisma } from "@/lib/prisma";
+
+export const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialProvider()
+  ]
+});
+```
+- If you're using a custom adapter or another database, see [Adapters](/documentation/adapters/overview).
+- You can register multiple providers. See the [Providers guide](/documentation/providers/overview) for details.
+
+### Set Up Middleware
+```ts
+// middleware.ts
 import { AuthKitMiddleware } from "@astra-void/auth-kit/middleware";
 
 const middleware = AuthKitMiddleware({
-  loginPath: '/login', // default: '/login'
-  logoutPath: '/logout', // default: '/logout'
-  registerPath: '/register', // default: '/register'
-  protectedRoutes: ['dashboard'], // protected routes
-  alwaysSetToken: false, // default: false
+    // Define your authentication routes
 });
 
 export { middleware };
 ```
-+ Matcher
+
+### useSession Hook
+You can use the `useSession` hook in your components to access the current session:
 ```ts
-export const config = {
-  matcher: ['/((?!api|_next/static|favicon.ico).*)'],
-};
-```
+"use client";
 
-## Client Usage
-
-### Login 
-
-```ts
-import { login } from '@astra-void/auth-kit/react';
-
-await login({ email: 'test@example.com', password: '12345678' });
-```
-
-### Logout
-
-```ts
-import { logout } from '@astra-void/auth-kit/react';
-
-await logout();
-```
-
-### Register
-
-```ts
-import { register } from '@astra-void/auth-kit/react';
-
-await register({ email: 'test@example.com', password: '12345678' });
-```
-
-### Login with Passkey
-```ts
-import { loginPasskey } from "@astra-void/auth-kit/react/passkey";
-
-await loginPasskey({ email: 'test@example.com' });
-```
-#### If you are using credential
-```ts
-import { loginPasskey } from "@astra-void/auth-kit/react/passkey";
-
-await loginPasskey();
-```
-
-### Register new Passkey (should logged in)
-```ts
-import { registerPasskey } from "@astra-void/auth-kit/react/passkey";
-
-await registerPasskey();
-```
-
-### Session Hook
-
-```ts
 import { useSession } from "@astra-void/auth-kit/react";
-import { useRouter } from "next/navigation";
 
-const router = useRouter();
 const { data: session } = useSession();
 
-if (session.status === "loading") return <Spinner />;
-if (session.status === "unauthenticated") router.push("/login");
+if (session.status === "loading") return <p>Loading...</p>;
+if (session.status === "unauthenticated") <p>Please log in.</p>;
 
 return <p>Welcome {session.user?.email}!</p>;
 ```
-+ The status is 'authenticated' | 'unauthenticated' | 'loading';
 
-## Examples
+## Examples & References
 
-Head over to the [Examples](/documentation/examples)for complete usage patterns in client and server components.
-
-→ Check out the [Adapters](/documentation/adapters/overview) for advanced usage.
+- [Examples](/documentation/examples)
+- [Adapters Guide](/documentation/adapters/overview)
+- [Passkey Guide](/documentation/passkey/overview)
+- [Providers Overview](/documentation/providers/overview)
