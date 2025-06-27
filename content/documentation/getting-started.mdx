@@ -68,6 +68,13 @@ After defining your schema, run the following commands to generate the Prisma cl
   yarn="yarn prisma migrate dev --name init && yarn prisma generate"
 />
 
+### Environment Variables
+Create a `.env` file in your project root with the following variables:
+```txt
+# .env
+AUTHKIT_SECRET="your-secret-key"
+```
+
 ### Set Up API Handler
 ```ts
 // app/api/auth/[...authkit]/route.ts
