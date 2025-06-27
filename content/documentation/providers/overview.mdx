@@ -64,11 +64,20 @@ export const handler = AuthKit({
 });
 ```
 
-Just add it to providers! and download package argon2 or bcrypt for password hashing.
+- You may use argon2, bcrypt, or other hashers.
+
+- Simple and widely compatible.
+
+- No extra config required.
 
 ### Passkey
 
-WebAuthn-based passwordless authentication.
+WebAuthn-based passwordless login using biometrics or device-based authentication.
+
+- Requires a challengeStore (e.g. Redis)
+
+- Supports both "email-first" and "credential-only" modes
+
 See [Passkey Overview](/documentation/passkey/overview) for full details.
 
 ## Custom Provider Example
