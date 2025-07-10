@@ -1,2 +1,114 @@
 # Magiclink
 
+The `MagiclinkProvider` enables passwordless email login via a one-time-use link sent to the user's email.
+
+This strategy is useful for frictionless login flows where users do not need to remember passwords.
+
+---
+
+## Setup
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { MagiclinkProvider } from "@astra-void/auth-kit/providers";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+import { prisma } from "@/lib/prisma";
+
+export const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    MagiclinkProvider()
+  ]
+});
+```
+
+You must implement the following in your adapter:
+
+```ts
+interface Adapter {
+  createMagicLinkToken(email: string, token: string, expires: Date): Promise<void>;
+  getUserByEmail(email: string): Promise<User | null>;
+  getUserByMagicLinkToken(token: string): Promise<User | null>;
+  deleteMagicLinkToken(token: string): Promise<void>;
+}
+```
+
+Alternatively, you can use the built-in Prisma-based adapter.
+
+---
+
+## Environment
+
+Add the following environment variables to define the origin and email service credentials:
+
+```env
+AUTHKIT_ORIGIN=https://your-app.com
+AUTHKIT_SMTP_PORT=587
+AUTHKIT_SMTP_USER="your-email@example.com"
+AUTHKIT_SMTP_PASS="your-app-password"
+AUTHKIT_EMAIL_FROM="your-email@example.com"
+```
+
+These are required for sending the login email.
+
+---
+
+## Email Template
+
+The email will include a one-time sign-in link, valid for 15 minutes.
+You can customize the email by overriding the `authorize` function
+
+---
+
+## Client Usage
+
+Use the `login()` function from the client:
+
+```tsx
+'use client';
+
+import { login } from "@astra-void/auth-kit/react";
+import { useState } from "react";
+
+export default function MagiclinkLogin() {
+  const [email, setEmail] = useState('');
+
+  return (
+    <div>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <button onClick={() => login("magiclink", { email })}>Login</button>
+    </div>
+  );
+}
+```
+
+---
+
+## Overriding Behavior
+
+You can override the default behavior by passing a partial provider:
+
+```ts
+MagiclinkProvider({
+  authorize: async ({ email }) => {
+    // custom logic here
+    return null;
+  }
+});
+```
+
+---
+
+## Notes
+
+- The magic link token should expire after a short time (e.g. 15 minutes)
+- The callback route should be defined at `/api/auth/callback?token=...`
+- A working email delivery system is required (SMTP credentials must be valid)
+
+---
+
+## See Also
+
+- [Getting Started](/documentation/getting-started)
+- [Providers Overview](/documentation/providers/overview)
+- [Adapter Guide](/documentation/adapters/overview)

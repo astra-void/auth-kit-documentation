@@ -1,2 +1,129 @@
 # Passkey
 
+The `PasskeyProvider` enables passwordless login using [WebAuthn](https://webauthn.io/) credentials such as Touch ID, Face ID, or Windows Hello.
+
+It follows the [FIDO2](https://fidoalliance.org/fido2/) standard and supports both **email-first** and **credential-only** login modes.
+
+---
+
+## Setup
+
+```ts
+import { AuthKit } from "@astra-void/auth-kit";
+import { PasskeyProvider } from "@astra-void/auth-kit/providers";
+import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
+import { RedisChallengeStore } from "@astra-void/auth-kit/store";
+import { prisma } from "@/lib/prisma";
+import { redis } from "@/lib/redis";
+
+export const handler = AuthKit({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    PasskeyProvider({
+      rpId: "localhost",
+      rpName: "Passkey Example",
+      mode: "credential", // or "email"
+      store: "redis",
+      challengeStore: RedisChallengeStore(redis),
+    }),
+  ],
+});
+```
+
+> ✅ You must define `AUTHKIT_ORIGIN` in your environment:
+
+```env
+AUTHKIT_ORIGIN=http://localhost:3000
+```
+
+---
+
+## Options
+
+| Option           | Type                      | Required | Description                                    |
+| ---------------- | ------------------------- | -------- | ---------------------------------------------- |
+| `rpId`           | `string`                  | ✅        | Relying party ID (usually your domain)         |
+| `rpName`         | `string`                  | ✅        | Human-readable app name shown in browser UI    |
+| `mode`           | `"email" \| "credential"` | ✅        | Login flow mode                                |
+| `challengeStore` | `ChallengeStore`          | ⚠️       | Store for persisting challenge across requests |
+| `store`          | `"memory" \| "redis"`     | ⚠️       | Shortcut to use a built-in challenge store     |
+
+> 💡 If `challengeStore` is omitted, an in-memory store will be used. Not recommended for production.
+
+---
+
+## Supported Modes
+
+### Email-first
+
+```txt
+1. Enter email ➝ 2. Get challenge ➝ 3. Use passkey ➝ ✅ Login
+```
+
+* Ideal for users with multiple accounts
+* More consistent UX
+* Recommended for most apps
+
+### Credential-only
+
+```txt
+1. Auto-prompt ➝ 2. Select account ➝ ✅ Login
+```
+
+* Fully passwordless
+* No email input needed
+* ⚠️ May slow down with many credentials stored on device
+
+> 💡 For large-scale apps, **email-first** is generally more reliable and faster.
+
+---
+
+## Client Usage
+
+Use the following APIs in your React components:
+
+### Register a Passkey (User must be logged in)
+
+```ts
+import { register } from "@astra-void/auth-kit/react";
+
+await register("passkey");
+```
+
+### Login with Passkey (Email-first mode)
+
+```ts
+import { login } from "@astra-void/auth-kit/react";
+
+await login("passkey", { email: "user@example.com" });
+```
+
+### Login with Passkey (Credential-only mode)
+
+```ts
+await login("passkey");
+```
+
+---
+
+## Security Notes
+
+* Passkeys are **phishing-resistant** and strongly bound to devices
+* Challenges should expire within \~5 minutes
+* HTTPS is **mandatory** in production environments
+
+---
+
+## Storage
+
+Passkeys are stored in your database using the configured adapter.
+A typical schema includes fields like `publicKey`, `webAuthnId`, and `counter`.
+
+See the [Getting Started](/documentation/getting-started) guide for an example Prisma schema.
+
+---
+
+## See Also
+
+* [Getting Started](/documentation/getting-started)
+* [Providers Overview](/documentation/providers/overview)

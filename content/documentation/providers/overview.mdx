@@ -1,35 +1,16 @@
 # Overview
 
-Providers in AuthKit define how users authenticate.  
-They encapsulate the logic for login, registration, and session hydration.
+Providers define how users authenticate.
+They encapsulate login, registration, and session logic for strategies like credentials, passkeys, magic links, and custom flows.
 
 ---
 
-## What is a Provider?
+## Usage
 
-A **provider** implements the logic for authenticating a user — whether it's with email/password, passkey, OAuth, or even a custom strategy (like magic links).
-
-Each provider must implement the following interface:
+Register one or more providers when initializing `AuthKit()`:
 
 ```ts
-export type AuthorizeTypes = "oauth" | "email" | "credentials" | "passkey";
-
-export interface Provider {
-    name: string;
-    type: AuthorizeTypes;
-    config?: Record<string, any>;
-    authorize: (body: Body) => Promise<AdapterUser | null>;
-    register?: (body: Body) => Promise<AdapterUser | void | null>;
-    callback?: (req: NextRequest) => Promise<AdapterUser | null>;
-}
-```
-
-## Registering Providers
-
-To use a provider, register it in your AuthKit() setup:
-
-```ts
-import { AuthKit } from "@astra-void/auth-kit";
+import { AuthKit } from "@astra-void/au/th-kit";
 import { CredentialProvider, PasskeyProvider } from "@astra-void/auth-kit/providers";
 import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
 
@@ -42,75 +23,69 @@ export const handler = AuthKit({
 });
 ```
 
-You can register multiple providers.
-Each one will be mapped to the `login("provider-name", ...)` or `register("provider-name", ...)` on the client.
+Client calls like `login("credential")` or `register("passkey")` map directly to the corresponding provider.
+
+---
 
 ## Built-in Providers
 
 ### Credential
 
-Traditional email + password authentication.
+Email + password authentication.
 
 ```ts
-import { AuthKit } from "@astra-void/auth-kit";
-import { CredentialProvider } from "@astra-void/auth-kit/providers";
-import { PrismaAdapter } from "@astra-void/auth-kit/adapters";
-
-export const handler = AuthKit({
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    CredentialProvider(),
-  ]
-});
+CredentialProvider()
 ```
 
-- You may use argon2, bcrypt, or other hashers.
-
-- Simple and widely compatible.
-
-- No extra config required.
+- Compatible with bcrypt, argon2, etc.
+- No config required
 
 ### Passkey
 
-WebAuthn-based passwordless login using biometrics or device-based authentication.
-
-- Requires a challengeStore (e.g. Redis)
-
-- Supports both "email-first" and "credential-only" modes
-
-See [Passkey Overview](/documentation/passkey/overview) for full details.
-
-## Custom Provider Example
-
-You can define your own provider easily:
+WebAuthn-based passwordless login.
 
 ```ts
-import { Provider } from "@astra-void/auth-kit/providers";
+PasskeyProvider({
+  rpId: "localhost",
+  rpName: "Your App",
+  mode: "email", // or "credential"
+  challengeStore: RedisChallengeStore(redis)
+})
+```
 
-const MagicLinkProvider: Provider = {
-  name: "magiclink",
+- Biometric/device authentication
+- Requires challenge store (memory or Redis)
+- See [Passkey Guide](/documentation/providers/passkey)
+
+### Magiclink
+
+One-time login link sent via email.
+
+```ts
+MagiclinkProvider()
+```
+
+- Requires SMTP setup and adapter methods for token handling
+- See [Magiclink Guide](/documentation/providers/magiclink)
+
+---
+
+## Custom Provider
+
+You can build your own:
+
+```ts
+const MyProvider = {
+  name: "my-custom",
   type: "email",
-  authorize: async ({ token }) => {
-    const user = await getUserFromToken(token);
-    return user ?? null;
-  },
-  register: async ({ email }) => {
-    return await createUser({ email });
-  }
+  authorize: async ({ token }) => getUser(token),
+  register: async ({ email }) => createUser(email)
 };
 ```
 
-## Notes
-- Providers are independent — each handles only its own logic.
-
-- You can mix and match multiple strategies per app.
-
-- The client API (login, register) chooses the provider by name.
+---
 
 ## See Also
 
-- [Getting Started](../getting-started)
-
+- [Getting Started](/documentation/getting-started)
 - [Adapters](/documentation/adapters/overview)
-
-- [Passkey](/documentation/passkey/overview)
