@@ -6,20 +6,20 @@ import './globals.css'
 
 export const metadata = {
   title: {
-    template: '%s - auth-kit'
+    template: '%s - astra-void'
   },
-  description: 'Auth-kit documentation',
-  applicationName: 'Auth-kit',
+  description: 'astra-void\'s Documentation',
+  applicationName: 'astra-void\'s Documentation',
   generator: 'Next.js',
   appleWebApp: {
-    title: 'Auth-kit'
+    title: 'astra-void\'s Documentation'
   },
 }
 
 export default async function RootLayout({ children }) {
   const navbar = (
     <Navbar
-      logo={<b>@astra-void/auth-kit</b>}
+      logo={<b>@astra-void</b>}
     />
   )
   const pageMap = await getPageMap()

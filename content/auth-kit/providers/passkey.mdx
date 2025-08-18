@@ -23,8 +23,7 @@ export const handler = AuthKit({
       rpId: "localhost",
       rpName: "Passkey Example",
       mode: "credential", // or "email"
-      store: "redis",
-      challengeStore: RedisChallengeStore(redis),
+      store: RedisChallengeStore(redis),
     }),
   ],
 });
@@ -45,10 +44,9 @@ AUTHKIT_ORIGIN=http://localhost:3000
 | `rpId`           | `string`                  | ✅        | Relying party ID (usually your domain)         |
 | `rpName`         | `string`                  | ✅        | Human-readable app name shown in browser UI    |
 | `mode`           | `"email" \| "credential"` | ✅        | Login flow mode                                |
-| `challengeStore` | `ChallengeStore`          | ⚠️       | Store for persisting challenge across requests |
-| `store`          | `"memory" \| "redis"`     | ⚠️       | Shortcut to use a built-in challenge store     |
+| `store`          | `ChallengeStore`          | ⚠️       | Store for persisting challenge across requests |
 
-> 💡 If `challengeStore` is omitted, an in-memory store will be used. Not recommended for production.
+> 💡 If `store` is omitted, an in-memory store will be used. Not recommended for production.
 
 ---
 
@@ -119,11 +117,11 @@ await login("passkey");
 Passkeys are stored in your database using the configured adapter.
 A typical schema includes fields like `publicKey`, `webAuthnId`, and `counter`.
 
-See the [Getting Started](/documentation/getting-started) guide for an example Prisma schema.
+See the [Getting Started](/auth-kit/getting-started) guide for an example Prisma schema.
 
 ---
 
 ## See Also
 
-* [Getting Started](/documentation/getting-started)
-* [Providers Overview](/documentation/providers/overview)
+* [Getting Started](/auth-kit/getting-started)
+* [Providers Overview](/auth-kit/providers/overview)
